@@ -7,10 +7,14 @@ let cellSize = ref(25); // Initial cell size
 let canvasSize = ref({ width: 0, height: 0 });
 let numRows = ref(0);
 let numCols = ref(0);
+let initialCanvasHeight = 0; // Store the initial canvas height
 
 onMounted(() => {
   const canvas = canvasRef.value;
   if (!canvas) return;
+
+  // Store the initial canvas height
+  initialCanvasHeight = canvas.clientHeight;
 
   // Setup canvas context and initial game state
   setupCanvas(canvas);
@@ -26,75 +30,105 @@ const toggleAnimation = () => {
   }
 };
 
+const handleCellSizeChange = () => {
+  const canvas = canvasRef.value;
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  // Recalculate number of rows and columns based on new cell size
+  computeRowsAndCols();
+
+  // Calculate new canvas width and height based on the number of rows and columns
+  // const newWidth = numCols.value * cellSize.value;
+  // const newHeight = numRows.value * cellSize.value;
+
+  // // Adjust canvas size
+  // canvas.width = newWidth;
+  // canvas.height = newHeight;
+
+  // Redraw grid lines
+  console.log('typeof ', typeof cellSize.value)
+  drawGrid(ctx,  canvas.width, canvas.height, cellSize.value);
+};
+
 const setupCanvas = (canvas: HTMLCanvasElement) => {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const computedStyle = window.getComputedStyle(canvas);
-  const width = parseInt(computedStyle.width);
-  const height = parseInt(computedStyle.height);
-
   // Calculate number of rows and columns based on canvas size and cell size
-  computeRowsAndCols(width, height);
+  computeRowsAndCols();
+// Ensure canvas size is square
+  const minDimension = Math.min(numRows.value, numCols.value) * cellSize.value;
+  canvas.width = minDimension;
+  canvas.height = minDimension;
 
-  canvasSize.value = { width, height };
-
-  // Resize canvas to fit exact number of cells
-  canvas.width = numCols.value * cellSize.value;
-  canvas.height = numRows.value * cellSize.value;
-  ctx.strokeStyle = "rgb(255,255,255)";
-  ctx.lineWidth = 1;
+  canvasSize.value = { width: minDimension, height: minDimension };
   // Draw initial grid
-  drawGrid(ctx, width, height, cellSize.value);
+  drawGrid(ctx, minDimension, minDimension, cellSize.value);
   // Initialize game state and draw initial grid
   // You can implement this part according to your game logic
 };
 
-const computeRowsAndCols = (width: number, height: number) => {
-  numRows.value = Math.floor(height / cellSize.value);
-  numCols.value = Math.floor(width / cellSize.value);
+const computeRowsAndCols = () => {
+  const canvas = canvasRef.value;
+  if (!canvas) return;
+
+  numRows.value = Math.floor(canvas.clientHeight / cellSize.value);
+  numCols.value = Math.floor(canvas.clientWidth / cellSize.value);
 };
 
 const handleWindowResize = () => {
   const canvas = canvasRef.value;
   if (!canvas) return;
 
-  const { width, height } = canvas.getBoundingClientRect();
-  computeRowsAndCols(width, height);
+  computeRowsAndCols();
 
-  canvas.width = numCols.value * cellSize.value;
-  canvas.height = numRows.value * cellSize.value;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
+
   // Redraw grid
-  drawGrid(ctx, width, height, cellSize.value);
+  drawGrid(ctx, canvas.clientWidth, initialCanvasHeight, cellSize.value);
 };
 
 const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, cellSize: number) => {
+  ctx.clearRect(0, 0, width, height); // Clear the canvas
   ctx.strokeStyle = "rgb(255,255,255)";
   ctx.lineWidth = 1;
-  ctx.beginPath();
+  console.log('cellSize', cellSize)
+  // Draw vertical grid lines
   for (let x = 0; x <= width; x += cellSize) {
+    console.log('vertical line :', x)
+    ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, height);
+    ctx.stroke();
   }
+
+  // Draw horizontal grid lines
   for (let y = 0; y <= height; y += cellSize) {
+    console.log('horizontal line :', y)
+    ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
+    ctx.stroke();
   }
-  ctx.stroke();
+};
+
+const computeMaxCellSize = () => {
+  const canvas = canvasRef.value;
+  if (!canvas) return 0;
+
+  // Calculate maximum allowed cell size based on canvas dimensions and number of rows/columns
+  const maxWidthCellSize = Math.floor(canvas.width / numCols.value);
+  const maxHeightCellSize = Math.floor(canvas.height / numRows.value);
+
+  // Choose the smaller value as the maximum allowed cell size
+  return Math.min(maxWidthCellSize, maxHeightCellSize);
 };
 
 watch(cellSize, (newCellSize, oldCellSize) => {
-  const canvas = canvasRef.value;
-  if (!canvas) return;
-
-  const { width, height } = canvas.getBoundingClientRect();
-
-  computeRowsAndCols(width, height);
-
-  canvas.width = numCols.value * newCellSize;
-  canvas.height = numRows.value * newCellSize;
+  handleCellSizeChange();
 });
 </script>
 
@@ -106,7 +140,7 @@ watch(cellSize, (newCellSize, oldCellSize) => {
       <div>Number of Rows: {{ numRows }}</div>
       <div>Number of Columns: {{ numCols }}</div>
       <div>Cell Size: {{ cellSize }}px</div>
-      <input type='range' v-model="cellSize" min="10" max="30"></input>
+      <input type='range' v-model.number="cellSize" min="10" max="30" step="1"></input>
     </div>
 
     <button @click="toggleAnimation">{{ paused ? "Resume" : "Pause" }}</button>
@@ -128,7 +162,7 @@ canvas {
   max-width: 100%; /* Ensure the canvas does not exceed the width of its container */
   display: block; /* Ensure the canvas behaves as a block-level element */
   border: 1px solid black;
-  background-color: black;
+  background-color: #222; /* Darker background color */
 }
 
 button {
