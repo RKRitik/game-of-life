@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, onBeforeUnmount } from "vue";
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const paused = ref(false);
@@ -8,6 +8,45 @@ let canvasSize = ref({ width: 0, height: 0 });
 let numRows = ref(0);
 let numCols = ref(0);
 let initialCanvasHeight = 0; // Store the initial canvas height
+let gridState: boolean[][] = [];
+let isDragging = ref(false);
+
+const handleMouseDown = (event: MouseEvent) => {
+  isDragging.value = true;
+  // handleMouseDrag(event);
+};
+
+const handleMouseUp = () => {
+  isDragging.value = false;
+};
+
+const handleMouseMove = (event: MouseEvent) => {
+  if (isDragging.value) {
+    const canvas = canvasRef.value;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    const x = (event.clientX - rect.left) * scaleX;
+    const y = (event.clientY - rect.top) * scaleY;
+
+    const col = Math.floor(x / cellSize.value);
+    const row = Math.floor(y / cellSize.value);
+
+    fillGridCell(col, row);
+
+    // If you want to fill multiple cells while dragging, you can adjust the logic here
+    // For example, you can keep track of the last filled cell and fill all cells in between
+
+  }
+};
+
+const handleMouseLeave = () => {
+  // End mouse drag event when mouse leaves the canvas
+  isDragging.value = false;
+};
 
 onMounted(() => {
   const canvas = canvasRef.value;
@@ -21,6 +60,19 @@ onMounted(() => {
 
   // Add window resize listener
   window.addEventListener('resize', handleWindowResize);
+  canvas.addEventListener('mousedown', handleMouseDown);
+  canvas.addEventListener('mouseup', handleMouseUp);
+  canvas.addEventListener('mousemove', handleMouseMove);
+  canvas.addEventListener('mouseleave', handleMouseLeave);
+});
+
+onBeforeUnmount(() => {
+  const canvas = canvasRef.value;
+  if (!canvas) return;
+  canvas.removeEventListener('mousedown', handleMouseDown);
+  canvas.removeEventListener('mouseup', handleMouseUp);
+  canvas.removeEventListener('mousemove', handleMouseMove);
+  canvas.removeEventListener('mouseleave', handleMouseLeave);
 });
 
 const toggleAnimation = () => {
@@ -28,6 +80,47 @@ const toggleAnimation = () => {
   if (!paused.value) {
     // Start animation loop
   }
+};
+
+const fillGridCell = (col: number, row: number) => {
+  const canvas = canvasRef.value;
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  if (row < 0 || row >= numRows.value || col < 0 || col >= numCols.value) {
+    // Row or column index is out of bounds
+    return;
+  }
+
+  ctx.fillStyle = 'grey'; // Set desired fill color
+  ctx.fillRect(col * cellSize.value, row * cellSize.value, cellSize.value, cellSize.value);
+  gridState[row][col] = true;
+};
+
+const clearGridCell = (col: number, row: number) => {
+  const canvas = canvasRef.value;
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  // Clear the grid cell
+  ctx.clearRect(col * cellSize.value, row * cellSize.value, cellSize.value, cellSize.value);
+
+  // Update the grid state to indicate that this cell is now empty
+  gridState[row][col] = false;
+};
+
+const clearAllFilledCells = () => {
+  gridState.forEach((row, rowIndex) => {
+    row.forEach((isFilled, colIndex) => {
+      if (isFilled) {
+        clearGridCell(colIndex, rowIndex);
+      }
+    });
+  });
 };
 
 const handleCellSizeChange = () => {
@@ -49,7 +142,8 @@ const handleCellSizeChange = () => {
 
   // Redraw grid lines
   console.log('typeof ', typeof cellSize.value)
-  drawGrid(ctx,  canvas.width, canvas.height, cellSize.value);
+  drawGrid(ctx, canvas.width, canvas.height, cellSize.value);
+  initializeGridState();
 };
 
 const setupCanvas = (canvas: HTMLCanvasElement) => {
@@ -58,16 +152,24 @@ const setupCanvas = (canvas: HTMLCanvasElement) => {
 
   // Calculate number of rows and columns based on canvas size and cell size
   computeRowsAndCols();
-// Ensure canvas size is square
+  // Ensure canvas size is square
   const minDimension = Math.min(numRows.value, numCols.value) * cellSize.value;
   canvas.width = minDimension;
   canvas.height = minDimension;
 
   canvasSize.value = { width: minDimension, height: minDimension };
+  // Initialize gridState array with default values (e.g., all cells are initially empty)
+  initializeGridState();
   // Draw initial grid
   drawGrid(ctx, minDimension, minDimension, cellSize.value);
   // Initialize game state and draw initial grid
   // You can implement this part according to your game logic
+};
+
+const initializeGridState = () => {
+  const numRows = Math.floor(canvasSize.value.height / cellSize.value);
+  const numCols = Math.floor(canvasSize.value.width / cellSize.value);
+  gridState = Array.from({ length: numRows }, () => Array.from({ length: numCols }, () => false));
 };
 
 const computeRowsAndCols = () => {
@@ -115,18 +217,6 @@ const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, 
   }
 };
 
-const computeMaxCellSize = () => {
-  const canvas = canvasRef.value;
-  if (!canvas) return 0;
-
-  // Calculate maximum allowed cell size based on canvas dimensions and number of rows/columns
-  const maxWidthCellSize = Math.floor(canvas.width / numCols.value);
-  const maxHeightCellSize = Math.floor(canvas.height / numRows.value);
-
-  // Choose the smaller value as the maximum allowed cell size
-  return Math.min(maxWidthCellSize, maxHeightCellSize);
-};
-
 watch(cellSize, (newCellSize, oldCellSize) => {
   handleCellSizeChange();
 });
@@ -137,13 +227,15 @@ watch(cellSize, (newCellSize, oldCellSize) => {
     <canvas ref="canvasRef"></canvas>
     <div class="debug-info">
       <div>Canvas Size: {{ canvasSize.width }} x {{ canvasSize.height }}</div>
-      <div>Number of Rows: {{ numRows }}</div>
-      <div>Number of Columns: {{ numCols }}</div>
+      <div>Number of Rows: {{ gridState?.length }}</div>
+      <div>Number of Columns: {{ gridState?.length }}</div>
       <div>Cell Size: {{ cellSize }}px</div>
       <input type='range' v-model.number="cellSize" min="10" max="30" step="1"></input>
     </div>
-
-    <button @click="toggleAnimation">{{ paused ? "Resume" : "Pause" }}</button>
+    <div class="controls">
+      <button @click="clearAllFilledCells">Clear</button>
+      <button @click="toggleAnimation">{{ paused ? "Resume" : "Pause" }}</button>
+    </div>
   </div>
 </template>
 
@@ -151,29 +243,52 @@ watch(cellSize, (newCellSize, oldCellSize) => {
 .game-container {
   width: 100%;
   height: 100%;
-  max-width: 600px; /* Adjust maximum width as needed */
-  margin: 0 auto; /* Center the container horizontally */
+  max-width: 600px;
+  /* Adjust maximum width as needed */
+  margin: 0 auto;
+  /* Center the container horizontally */
   position: relative;
 }
 
 canvas {
   width: 100%;
   height: auto;
-  max-width: 100%; /* Ensure the canvas does not exceed the width of its container */
-  display: block; /* Ensure the canvas behaves as a block-level element */
+  max-width: 100%;
+  /* Ensure the canvas does not exceed the width of its container */
+  display: block;
+  /* Ensure the canvas behaves as a block-level element */
   border: 1px solid black;
-  background-color: #222; /* Darker background color */
+  background-color: #222;
+  /* Darker background color */
+}
+
+.controls {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  display: flex;
+  gap: 10px;
+  width: 100%;
 }
 
 button {
-  margin-top: 10px;
-  width: 100%;
-  position: absolute;
-  bottom: 10px; /* Adjust button position as needed */
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  width: 50%;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
+
+button:hover {
+  background-color: #0056b3;
+}
+
 .debug-info div {
   margin-bottom: 5px;
 }
+
 input[type="range"] {
   width: 100%;
 }
