@@ -2,14 +2,17 @@
 import { ref, onMounted, watch, onBeforeUnmount } from "vue";
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
-const paused = ref(false);
-let cellSize = ref(25); // Initial cell size
+const paused = ref(true);
+let cellSize = ref(60); // Initial cell size
 let canvasSize = ref({ width: 0, height: 0 });
 let numRows = ref(0);
 let numCols = ref(0);
 let initialCanvasHeight = 0; // Store the initial canvas height
 let gridState: boolean[][] = [];
 let isDragging = ref(false);
+const targetFrameRate = 5; // Target frame rate in frames per second
+const frameDelay = 1000 / targetFrameRate; // Delay in milliseconds between frames
+
 
 const handleMouseDown = (event: MouseEvent) => {
   isDragging.value = true;
@@ -85,6 +88,7 @@ onMounted(() => {
   canvas.addEventListener('mousemove', handleMouseMove);
   canvas.addEventListener('mouseleave', handleMouseLeave);
   canvas.addEventListener('click', handleCanvasClick)
+  computeNextGeneration();
 });
 
 onBeforeUnmount(() => {
@@ -100,7 +104,7 @@ onBeforeUnmount(() => {
 const toggleAnimation = () => {
   paused.value = !paused.value;
   if (!paused.value) {
-    // Start animation loop
+    computeNextGeneration();
   }
 };
 
@@ -235,7 +239,7 @@ const handleWindowResize = () => {
 };
 
 const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, cellSize: number) => {
-  ctx.clearRect(0, 0, width, height); // Clear the canvas
+  // ctx.clearRect(0, 0, width, height); // Clear the canvas
   ctx.strokeStyle = "rgb(255,255,255)";
   ctx.lineWidth = 1;
   console.log('cellSize', cellSize)
@@ -256,6 +260,94 @@ const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, 
   }
 };
 
+const getAliveNeighbours = (col: number, row: number) => {
+  let aliveNeighbours = 0;
+
+  // Define the offsets for neighboring cells
+  const offsets = [
+    [-1, -1], [-1, 0], [-1, 1],
+    [0, -1], /* Current cell */[0, 1],
+    [1, -1], [1, 0], [1, 1]
+  ];
+
+  // Iterate through each neighboring cell
+  for (const [dx, dy] of offsets) {
+    const newRow = row + dx;
+    const newCol = col + dy;
+
+    // Check if the neighboring cell is within the grid bounds
+    if (newRow >= 0 && newRow < numRows.value && newCol >= 0 && newCol < numCols.value) {
+      // If the neighboring cell is alive, increment the count
+      if (gridState[newRow][newCol]) {
+        aliveNeighbours++;
+      }
+    }
+  }
+
+  return aliveNeighbours;
+};
+
+const computeNextGeneration = () => {
+  if (paused.value) return;
+  const canvas = canvasRef.value;
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const nextGeneration = Array.from({ length: numRows.value }, () =>
+    Array.from({ length: numCols.value }, () => false)
+  );
+
+  // Iterate through each cell in the grid
+  for (let row = 0; row < numRows.value; row++) {
+    for (let col = 0; col < numCols.value; col++) {
+      // Count the number of alive neighbors for the current cell
+      const aliveNeighbours = getAliveNeighbours(col, row);
+
+      // Apply the rules of the Game of Life to determine the state of the cell in the next generation
+      if (gridState[row][col]) {
+        // Any live cell with fewer than two live neighbors dies
+        // Any live cell with two or three live neighbors lives on to the next generation
+        // Any live cell with more than three live neighbors dies
+        nextGeneration[row][col] = aliveNeighbours === 2 || aliveNeighbours === 3;
+      } else {
+        // Any dead cell with exactly three live neighbors becomes a live cell
+        nextGeneration[row][col] = aliveNeighbours === 3;
+      }
+    }
+  }
+
+  // Update the gridState with the next generation
+  gridState = nextGeneration;
+
+  // Redraw the entire grid on the canvas using the nextGeneration array
+  redrawGrid(canvas.width, canvas.height, cellSize.value, nextGeneration);
+  setTimeout(() => {
+    requestAnimationFrame(computeNextGeneration);
+  }, frameDelay);
+}
+
+const redrawGrid = (width: number, height: number, cellSize: number, nextGeneration: boolean[][]) => {
+  const canvas = canvasRef.value;
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  // Clear the canvas
+  ctx.clearRect(0, 0, width, height);
+
+  // Iterate through the nextGeneration array and draw each cell
+  for (let row = 0; row < numRows.value; row++) {
+    for (let col = 0; col < numCols.value; col++) {
+      if (nextGeneration[row][col]) {
+        ctx.fillStyle = 'grey';
+        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+      }
+    }
+  }
+};
+
 watch(cellSize, (newCellSize, oldCellSize) => {
   handleCellSizeChange();
 });
@@ -269,7 +361,7 @@ watch(cellSize, (newCellSize, oldCellSize) => {
       <div>Number of Rows: {{ gridState?.length }}</div>
       <div>Number of Columns: {{ gridState?.length }}</div>
       <div>Cell Size: {{ cellSize }}px</div>
-      <input type='range' v-model.number="cellSize" min="10" max="30" step="1"></input>
+      <input type='range' v-model.number="cellSize" min="10" max="60" step="5"></input>
     </div>
     <div class="controls">
       <button @click="clearAllFilledCells">Clear</button>
