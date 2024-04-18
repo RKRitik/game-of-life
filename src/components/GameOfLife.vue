@@ -48,6 +48,26 @@ const handleMouseLeave = () => {
   isDragging.value = false;
 };
 
+const handleCanvasClick = (event: MouseEvent) => {
+  const canvas = canvasRef.value;
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+
+  const x = (event.clientX - rect.left) * scaleX;
+  const y = (event.clientY - rect.top) * scaleY;
+
+  const col = Math.floor(x / cellSize.value);
+  const row = Math.floor(y / cellSize.value);
+
+  fillGridCell(col, row);
+};
+
 onMounted(() => {
   const canvas = canvasRef.value;
   if (!canvas) return;
@@ -64,6 +84,7 @@ onMounted(() => {
   canvas.addEventListener('mouseup', handleMouseUp);
   canvas.addEventListener('mousemove', handleMouseMove);
   canvas.addEventListener('mouseleave', handleMouseLeave);
+  canvas.addEventListener('click', handleCanvasClick)
 });
 
 onBeforeUnmount(() => {
@@ -73,6 +94,7 @@ onBeforeUnmount(() => {
   canvas.removeEventListener('mouseup', handleMouseUp);
   canvas.removeEventListener('mousemove', handleMouseMove);
   canvas.removeEventListener('mouseleave', handleMouseLeave);
+  canvas.removeEventListener('click', handleCanvasClick);
 });
 
 const toggleAnimation = () => {
