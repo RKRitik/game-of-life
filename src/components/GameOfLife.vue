@@ -129,21 +129,17 @@ const handleCellSizeChange = () => {
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  // Recalculate number of rows and columns based on new cell size
-  computeRowsAndCols();
+  const { width, height } = canvas.getBoundingClientRect();
 
-  // Calculate new canvas width and height based on the number of rows and columns
-  // const newWidth = numCols.value * cellSize.value;
-  // const newHeight = numRows.value * cellSize.value;
+  // Calculate new canvas dimensions that are multiples of the cell size
+  const newWidth = Math.floor(width / cellSize.value) * cellSize.value;
+  const newHeight = Math.floor(height / cellSize.value) * cellSize.value;
 
-  // // Adjust canvas size
-  // canvas.width = newWidth;
-  // canvas.height = newHeight;
-
-  // Redraw grid lines
-  console.log('typeof ', typeof cellSize.value)
+  // Update canvas dimensions
+  canvas.width = newWidth;
+  canvas.height = newHeight;
   drawGrid(ctx, canvas.width, canvas.height, cellSize.value);
-  initializeGridState();
+  resetGridState();
 };
 
 const setupCanvas = (canvas: HTMLCanvasElement) => {
@@ -159,17 +155,40 @@ const setupCanvas = (canvas: HTMLCanvasElement) => {
 
   canvasSize.value = { width: minDimension, height: minDimension };
   // Initialize gridState array with default values (e.g., all cells are initially empty)
-  initializeGridState();
+  resetGridState();
   // Draw initial grid
   drawGrid(ctx, minDimension, minDimension, cellSize.value);
   // Initialize game state and draw initial grid
   // You can implement this part according to your game logic
 };
 
-const initializeGridState = () => {
-  const numRows = Math.floor(canvasSize.value.height / cellSize.value);
-  const numCols = Math.floor(canvasSize.value.width / cellSize.value);
-  gridState = Array.from({ length: numRows }, () => Array.from({ length: numCols }, () => false));
+const resetGridState = () => {
+  if (!canvasRef.value) return;
+  const newNumRows = Math.floor(canvasRef.value.height / cellSize.value);
+  const newNumCols = Math.floor(canvasRef.value.width / cellSize.value);
+  // console.log('newNumRows', newNumRows, 'newNumCols', newNumCols)
+  // // Create a new gridState array with the updated dimensions
+  const newGridState = Array.from({ length: newNumRows }, () =>
+    Array.from({ length: newNumCols }, () => false)
+  );
+  // console.log('newGridState', newGridState)
+
+  // // Copy existing values from old gridState to new gridState
+  // for (let row = 0; row < Math.min(numRows.value, newNumRows); row++) {
+  //   for (let col = 0; col < Math.min(numCols.value, newNumCols); col++) {
+  //     try {
+  //       newGridState[row][col] = gridState[row][col];
+  //     }
+  //     catch (e) {
+  //       newGridState[row][col] = false;
+  //     }
+  //   }
+  // }
+
+  // // Update numRows, numCols, and gridState
+  numRows.value = newNumRows;
+  numCols.value = newNumCols;
+  gridState = newGridState;
 };
 
 const computeRowsAndCols = () => {
@@ -200,7 +219,6 @@ const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, 
   console.log('cellSize', cellSize)
   // Draw vertical grid lines
   for (let x = 0; x <= width; x += cellSize) {
-    console.log('vertical line :', x)
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, height);
@@ -209,7 +227,6 @@ const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, 
 
   // Draw horizontal grid lines
   for (let y = 0; y <= height; y += cellSize) {
-    console.log('horizontal line :', y)
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
