@@ -3,7 +3,7 @@ import { ref, onMounted, watch, onBeforeUnmount } from "vue";
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const paused = ref(true);
-let cellSize = ref(60); // Initial cell size
+let cellSize = ref(15); // Initial cell size
 let canvasSize = ref({ width: 0, height: 0 });
 let numRows = ref(0);
 let numCols = ref(0);
@@ -39,10 +39,6 @@ const handleMouseMove = (event: MouseEvent) => {
     const row = Math.floor(y / cellSize.value);
 
     fillGridCell(col, row);
-
-    // If you want to fill multiple cells while dragging, you can adjust the logic here
-    // For example, you can keep track of the last filled cell and fill all cells in between
-
   }
 };
 
@@ -120,9 +116,6 @@ const spawnGlider = () => {
 };
 
 const spawnPulsar = () => {
-  // Define the pattern for a pulsar
-  // You can find the pattern for a pulsar online or create your own
-  // This is an example pattern, you may need to adjust it for your specific grid size
   const pattern = [
     [false, true, true, true, false, false, true, true, true, false],
     [true, false, false, false, true, true, false, false, false, true],
@@ -305,7 +298,6 @@ const setupCanvas = (canvas: HTMLCanvasElement) => {
   // Draw initial grid
   drawGrid(ctx, minDimension, minDimension, cellSize.value);
   // Initialize game state and draw initial grid
-  // You can implement this part according to your game logic
 };
 
 const resetGridState = () => {
