@@ -465,7 +465,25 @@ watch(cellSize, (newCellSize, oldCellSize) => {
 });
 </script>
 
+<script lang="ts">
+import GameControls from './GameControls.vue';
+
+export default {
+  components: {
+    GameControls,
+  },
+  methods: {
+    executeFunction() {
+      // Function logic here
+      console.log('Function executed from ParentComponent');
+    }
+  }
+};
+</script>
+
 <template>
+  <GameControls ref="controls" :clear="clearAllFilledCells" :toggle="toggleAnimation" :random="randomLives"
+    :spawnLife="lifeSpawner" />
   <div class="game-container">
     <canvas ref="canvasRef"></canvas>
     <div class="debug-info">
@@ -475,12 +493,12 @@ watch(cellSize, (newCellSize, oldCellSize) => {
       <div>Cell Size: {{ cellSize }}px</div>
       <input type='range' v-model.number="cellSize" min="10" max="60" step="5"></input>
     </div>
-    <div class="controls">
+    <!-- <div class="controls">
       <button @click="clearAllFilledCells">Clear</button>
       <button @click="toggleAnimation">{{ paused ? "Resume" : "Pause" }}</button>
       <button @click="randomLives">random</button>
       <button @click="lifeSpawner">life Spawner</button>
-    </div>
+    </div> -->
   </div>
 </template>
 
