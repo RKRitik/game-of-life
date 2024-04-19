@@ -71,6 +71,126 @@ const handleCanvasClick = (event: MouseEvent) => {
   fillGridCell(col, row);
 };
 
+const lifeSpawner = () => {
+  let choice = Math.floor(Math.random() * 4);
+  switch (choice) {
+    case 0: //1. static 4x4
+      spawnStaticPattern(); break;
+    case 1:// 2. blinker
+      spawnBlinker();
+      break;
+    case 2: // 3. glider
+      spawnGlider();
+      break;
+    case 3:// 4. pulsar
+      spawnPulsar();
+      break;
+  }
+}
+
+const spawnStaticPattern = () => {
+  const pattern = [
+    [true, true, false, false],
+    [true, true, false, false],
+    [false, false, true, true],
+    [false, false, true, true]
+  ];
+
+  updateGridState(pattern);
+};
+
+const spawnBlinker = () => {
+  const pattern = [
+    [false, true, false],
+    [false, true, false],
+    [false, true, false]
+  ];
+
+  updateGridState(pattern);
+};
+
+const spawnGlider = () => {
+  const pattern = [
+    [false, true, false],
+    [false, false, true],
+    [true, true, true]
+  ];
+
+  updateGridState(pattern);
+};
+
+const spawnPulsar = () => {
+  // Define the pattern for a pulsar
+  // You can find the pattern for a pulsar online or create your own
+  // This is an example pattern, you may need to adjust it for your specific grid size
+  const pattern = [
+    [false, true, true, true, false, false, true, true, true, false],
+    [true, false, false, false, true, true, false, false, false, true],
+    [true, false, false, false, true, true, false, false, false, true],
+    [true, false, false, false, true, true, false, false, false, true],
+    [false, true, true, true, false, false, true, true, true, false],
+    [false, true, true, true, false, false, true, true, true, false],
+    [true, false, false, false, true, true, false, false, false, true],
+    [true, false, false, false, true, true, false, false, false, true],
+    [true, false, false, false, true, true, false, false, false, true],
+    [false, true, true, true, false, false, true, true, true, false]
+  ];
+
+  updateGridState(pattern);
+};
+
+const updateGridState = (pattern: boolean[][]) => {
+  const canvas = canvasRef.value;
+  if (!canvas) return;
+  // Get the maximum start row and column values to ensure the pattern fits within bounds
+  const maxStartRow = numRows.value - pattern.length;
+  const maxStartCol = numCols.value - pattern[0].length;
+
+  // Generate random start row and column values within bounds
+  const startRow = Math.floor(Math.random() * (maxStartRow + 1));
+  const startCol = Math.floor(Math.random() * (maxStartCol + 1));
+
+
+  // Update the grid state with the pattern
+  for (let i = 0; i < pattern.length; i++) {
+    for (let j = 0; j < pattern[i].length; j++) {
+      gridState[startRow + i][startCol + j] = pattern[i][j];
+    }
+  }
+
+  // Redraw the grid on the canvas
+  redrawGrid(canvas.width, canvas.height, cellSize.value, gridState);
+};
+
+const randomLives = () => {
+  if (paused.value) return;
+  const canvas = canvasRef.value;
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  // Create a new generation array to store the next state
+  const nextGeneration = [];
+
+  // Iterate through each cell in the grid
+  for (let row = 0; row < numRows.value; row++) {
+    const newRow = [];
+    for (let col = 0; col < numCols.value; col++) {
+      // Randomly determine whether the cell should be alive or dead
+      const isAlive = Math.random() < 0.5; // 50% chance of being alive
+      newRow.push(isAlive);
+    }
+    nextGeneration.push(newRow);
+  }
+
+  // Update the grid state with the next generation
+  gridState = nextGeneration;
+
+  // Redraw the entire grid on the canvas using the nextGeneration array
+  redrawGrid(canvas.width, canvas.height, cellSize.value, nextGeneration);
+}
+
 onMounted(() => {
   const canvas = canvasRef.value;
   if (!canvas) return;
@@ -366,6 +486,8 @@ watch(cellSize, (newCellSize, oldCellSize) => {
     <div class="controls">
       <button @click="clearAllFilledCells">Clear</button>
       <button @click="toggleAnimation">{{ paused ? "Resume" : "Pause" }}</button>
+      <button @click="randomLives">random</button>
+      <button @click="lifeSpawner">life Spawner</button>
     </div>
   </div>
 </template>
