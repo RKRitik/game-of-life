@@ -387,14 +387,15 @@ const getAliveNeighbours = (col: number, row: number) => {
   for (const [dx, dy] of offsets) {
     const newRow = row + dx;
     const newCol = col + dy;
-
-    // Check if the neighboring cell is within the grid bounds
-    if (newRow >= 0 && newRow < numRows.value && newCol >= 0 && newCol < numCols.value) {
-      // If the neighboring cell is alive, increment the count
-      if (gridState[newRow][newCol]) {
-        aliveNeighbours++;
+    try {
+      // Check if the neighboring cell is within the grid bounds
+      if (newRow >= 0 && newRow < numRows.value && newCol >= 0 && newCol < numCols.value) {
+        // If the neighboring cell is alive, increment the count
+        if (gridState[newRow][newCol]) {
+          aliveNeighbours++;
+        }
       }
-    }
+    } catch (e) { }
   }
 
   return aliveNeighbours;
@@ -413,6 +414,8 @@ const computeNextGeneration = () => {
 
   // Iterate through each cell in the grid
   for (let row = 0; row < numRows.value; row++) {
+    let valRow = gridState[row];
+    if (!valRow) continue;
     for (let col = 0; col < numCols.value; col++) {
       // Count the number of alive neighbors for the current cell
       const aliveNeighbours = getAliveNeighbours(col, row);
