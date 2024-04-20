@@ -1,19 +1,33 @@
 <template>
   <div class="controls">
     <!-- Your control buttons here -->
-    <button @click="executeFunction">Clear</button>
-    <button>Resume</button>
-    <button>Random</button>
-    <button>Spawn Random Patterns</button>
+    <button @click="clearFn">Clear</button>
+    <button @click="toggleFn">{{ paused ? 'Resume' : 'Pause' }}</button>
+    <button @click="randomFn">Random</button>
+    <button @click="spawnFn">Spawn Random Patterns</button>
   </div>
 </template>
 
 <script>
 export default {
   props: {
-    executeFunction: {
-      type: Function,
+    paused: {
+      type: Boolean,
       required: true
+    }
+  },
+  methods: {
+    clearFn() {
+      this.$emit('onClear');
+    },
+    toggleFn() {
+      this.$emit('onToggle');
+    },
+    randomFn() {
+      this.$emit('onRandom');
+    },
+    spawnFn() {
+      this.$emit('onSpawnLife');
     }
   }
 };

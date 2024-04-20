@@ -2,8 +2,8 @@
 import { ref, onMounted, watch, onBeforeUnmount } from "vue";
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
-const paused = ref(true);
-let cellSize = ref(15); // Initial cell size
+const paused = ref(false);
+let cellSize = ref(10); // Initial cell size
 let canvasSize = ref({ width: 0, height: 0 });
 let numRows = ref(0);
 let numCols = ref(0);
@@ -193,6 +193,7 @@ onMounted(() => {
 
   // Setup canvas context and initial game state
   setupCanvas(canvas);
+  randomLives();
 
   // Add window resize listener
   window.addEventListener('resize', handleWindowResize);
@@ -468,22 +469,11 @@ watch(cellSize, (newCellSize, oldCellSize) => {
 <script lang="ts">
 import GameControls from './GameControls.vue';
 
-export default {
-  components: {
-    GameControls,
-  },
-  methods: {
-    executeFunction() {
-      // Function logic here
-      console.log('Function executed from ParentComponent');
-    }
-  }
-};
 </script>
 
 <template>
-  <GameControls ref="controls" :clear="clearAllFilledCells" :toggle="toggleAnimation" :random="randomLives"
-    :spawnLife="lifeSpawner" />
+  <GameControls :paused="paused" ref="controls" @onClear="clearAllFilledCells" @onToggle="toggleAnimation"
+    @onRandom="randomLives" @onSpawnLife="lifeSpawner" />
   <div class="game-container">
     <canvas ref="canvasRef"></canvas>
     <div class="debug-info">
@@ -550,9 +540,11 @@ button:hover {
 
 .debug-info div {
   margin-bottom: 5px;
+  display: none;
 }
 
 input[type="range"] {
   width: 100%;
+  display: none;
 }
 </style>
