@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { ref } from "vue";
+
 import GameOfLife from "./components/GameOfLife.vue";
+let full = ref(false);
 </script>
 <template>
-  <div>
+  <div class="app">
     <header class="app-header">
       <h1>Game of Life</h1>
-      <span>fullscreen</span>
+      <span class="full-cta" @click="full = !full">Fullscreen</span>
       <div class="header-links">
         <a href="/about">About the Game</a>
         <a href="https://github.com/RKRitik/game-of-life">GitHub</a>
@@ -14,12 +17,16 @@ import GameOfLife from "./components/GameOfLife.vue";
     </header>
 
     <div class="canvas-container">
-      <GameOfLife />
+      <GameOfLife :isFull="full" />
     </div>
   </div>
 </template>
 
 <style scoped>
+.full-cta {
+  cursor: pointer;
+}
+
 .app-header {
   background-color: #333;
   color: white;
@@ -37,5 +44,11 @@ import GameOfLife from "./components/GameOfLife.vue";
   color: white;
   text-decoration: none;
   margin-right: 10px;
+}
+
+.app,
+.canvas-container {
+  width: 100%;
+  height: 100%;
 }
 </style>

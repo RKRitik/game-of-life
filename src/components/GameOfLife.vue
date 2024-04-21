@@ -14,7 +14,7 @@ const targetFrameRate = 5; // Target frame rate in frames per second
 const frameDelay = 1000 / targetFrameRate; // Delay in milliseconds between frames
 
 
-const handleMouseDown = (event: MouseEvent) => {
+const handleMouseDown = (_event: MouseEvent) => {
   isDragging.value = true;
   // handleMouseDrag(event);
 };
@@ -183,7 +183,6 @@ const randomLives = () => {
   // Redraw the entire grid on the canvas using the nextGeneration array
   redrawGrid(canvas.width, canvas.height, cellSize.value, nextGeneration);
 }
-
 onMounted(() => {
   const canvas = canvasRef.value;
   if (!canvas) return;
@@ -464,20 +463,27 @@ const redrawGrid = (width: number, height: number, cellSize: number, nextGenerat
   }
 };
 
-watch(cellSize, (newCellSize, oldCellSize) => {
+watch(cellSize, (_newCellSize, _oldCellSize) => {
   handleCellSizeChange();
 });
 </script>
 
 <script lang="ts">
 import GameControls from './GameControls.vue';
-
+export default {
+  props: {
+    isFull: {
+      type: Boolean,
+      required: true
+    }
+  },
+};
 </script>
 
 <template>
   <GameControls :paused="paused" ref="controls" @onClear="clearAllFilledCells" @onToggle="toggleAnimation"
     @onRandom="randomLives" @onSpawnLife="lifeSpawner" />
-  <div class="game-container">
+  <div :class="{ 'game-container-sq': !isFull, 'game-container': true }">
     <canvas ref="canvasRef"></canvas>
     <div class="debug-info">
       <div>Canvas Size: {{ canvasSize.width }} x {{ canvasSize.height }}</div>
@@ -499,11 +505,12 @@ import GameControls from './GameControls.vue';
 .game-container {
   width: 100%;
   height: 100%;
-  max-width: 600px;
-  /* Adjust maximum width as needed */
   margin: 0 auto;
-  /* Center the container horizontally */
   position: relative;
+}
+
+.game-container-sq {
+  max-width: 600px;
 }
 
 canvas {

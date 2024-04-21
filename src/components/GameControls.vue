@@ -66,6 +66,7 @@ export default {
   left: 0;
   width: 20%;
   height: 100vh;
+  z-index: 5;
 }
 
 .controls {
